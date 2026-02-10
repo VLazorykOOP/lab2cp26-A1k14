@@ -1,20 +1,78 @@
-// OP26_Lab2_Thread.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
+#include <thread>
+#include <vector>
+#include <chrono>
+#include <mutex>
+#include <string>
 
-int main()
-{
-    std::cout << "Hello World!\n";
+using namespace std;
+
+const int WIDTH = 100;
+const int HEIGHT = 30;
+const int SPEED = 1;
+const int DELAY_MS = 100;
+
+mutex printMutex;
+
+class Vehicle {
+public:
+    string name;
+    int x, y;
+    int directionX;
+    int directionY;
+
+    Vehicle(string n, int x_pos, int y_pos, int dx, int dy) 
+        : name(n), x(x_pos), y(y_pos), directionX(dx), directionY(dy) {}
+
+    void moveX() {
+        while (true) {
+            {
+                lock_guard<mutex> lock(printMutex);
+                cout << "[Auto] " << name << " on X=" << x << endl;
+            }
+            
+            x += directionX * SPEED;
+
+            if (x >= WIDTH || x <= 0) {
+                directionX *= -1;
+            }
+            this_thread::sleep_for(chrono::milliseconds(DELAY_MS));
+        }
+    }
+
+    void moveY() {
+        while (true) {
+            {
+                lock_guard<mutex> lock(printMutex);
+                cout << "[Moto] " << name << " on Y=" << y << endl;
+            }
+
+            y += directionY * SPEED;
+
+            if (y >= HEIGHT || y <= 0) {
+                directionY *= -1;
+            }
+            this_thread::sleep_for(chrono::milliseconds(DELAY_MS));
+        }
+    }
+};
+
+int main() {
+    vector<thread> threads; 
+
+    threads.emplace_back([]() { 
+        Vehicle car("Tesla", 0, 5, 1, 0); 
+        car.moveX(); 
+    });
+    
+    threads.emplace_back([]() { 
+        Vehicle moto("Yamaha", 20, 0, 0, 1); 
+        moto.moveY(); 
+    });
+
+    for (auto& t : threads) {
+        if (t.joinable()) t.join();
+    }
+
+    return 0;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
